@@ -4,8 +4,35 @@
   "description": "A continuous test runner for JavaScript",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "ava"
   },
   "author": "Dan Parkin",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "ava": "^0.16.0",
+    "eslint": "^3.4.0",
+    "eslint-config-airbnb": "^10.0.1",
+    "eslint-plugin-import": "^1.14.0",
+    "eslint-plugin-jsx-a11y": "^2.2.0",
+    "eslint-plugin-react": "^6.2.0"
+  },
+  "ava": {
+    "files": [
+      "test/*.js",
+      "!**/not-this-file.js"
+    ],
+    "source": [
+      "**/*.{js,jsx}",
+      "!dist/**/*"
+    ],
+    "failFast": true,
+    "require": [
+      "babel-register"
+    ]
+  },
+  "dependencies": {
+    "esprima": "^2.7.3",
+    "esprima-harmony": "^7001.1.0-dev-harmony-fb",
+    "esprima-walk": "^0.1.0"
+  }
 }
