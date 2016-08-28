@@ -9,7 +9,6 @@
   "author": "Dan Parkin",
   "license": "ISC",
   "devDependencies": {
-    "ava": "^0.16.0",
     "eslint": "^3.4.0",
     "eslint-config-airbnb": "^10.0.1",
     "eslint-plugin-import": "^1.14.0",
@@ -31,6 +30,7 @@
     ]
   },
   "dependencies": {
+    "ava": "^0.16.0",
     "esprima": "^2.7.3",
     "esprima-harmony": "^7001.1.0-dev-harmony-fb",
     "esprima-walk": "^0.1.0"

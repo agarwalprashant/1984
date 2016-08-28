@@ -30,6 +30,7 @@ function CallSymbol(node) {
     property: node.callee.property.name || '',
     start: node.loc.start.line,
     end: node.loc.end.line,
+    source: '',
   };
 }
 
@@ -48,16 +49,30 @@ function ImportSymbol(node) {
 
 function Symbols() {
   const importDeclarations = [];
-  const callExpressions = [];
+  let callExpressions = [];
 
   function print() {
     [...importDeclarations, ...callExpressions].forEach(s => console.log(s));
+  }
+
+  function update() {
+    const imports = importDeclarations
+    .map(d => d.specifiers.map(s => ({ name: s, source: d.source })))
+    .reduce((prev, curr) => prev.concat(curr));
+
+    callExpressions.forEach((call, index) => {
+      const matchingImport = imports.filter(i => i.name === call.object)[0];
+      if (matchingImport) callExpressions[index].source = matchingImport.source;
+    });
+
+    callExpressions = callExpressions.filter(c => c.source !== '');
   }
 
   return {
     callExpressions,
     importDeclarations,
     print,
+    update,
   };
 }
 
@@ -81,4 +96,5 @@ walk(ast, (node) => {
   // }
 });
 
+symbols.update();
 symbols.print();
