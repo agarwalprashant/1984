@@ -10,3 +10,7 @@ test('test add', t => {
   t.is(sum, 4);
 });
 
+test('test subtract', t => {
+  const sum = calc.subtract(5, 3);
+  t.is(sum, 1);
+});

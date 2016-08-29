@@ -1,6 +1,6 @@
 {
   "name": "1984",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "A continuous test runner for JavaScript",
   "main": "index.js",
   "scripts": {
@@ -24,6 +24,7 @@
       "**/*.{js,jsx}",
       "!dist/**/*"
     ],
+    "tap": true,
     "failFast": true,
     "require": [
       "babel-register"
