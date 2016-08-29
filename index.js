@@ -84,10 +84,18 @@ function walkAst(ast) {
   });
 }
 
-function analyseTestResults(testOutput, executionError) {
-  console.log('hi, i do stuff post test');
-  console.log(executionError);
-  console.log(testOutput);
+function analyseTestResults(testOutput) {
+  const regex = /(not ok|ok)(.*)/g;
+  const testResults = testOutput.match(regex)
+  .reduce((results, currentResult, index) => {
+    const arrayParts = currentResult.split('-');
+    const testName = arrayParts[1].trim();
+    const testStatus = arrayParts[0].includes('not ok') ? 'fail' : 'pass';
+    results[index] = { testName, testStatus };
+    return results;
+  }, {});
+
+  console.log(testResults);
 }
 
 const TESTS_FINISHED_EVENT = 'TESTS_FINISHED_EVENT';
