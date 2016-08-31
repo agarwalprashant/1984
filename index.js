@@ -1,28 +1,18 @@
+/*
+*   1984 POC
+*/
+
 const fs = require('fs');
 const esprima = require('esprima-harmony');
 const esquery = require('esquery');
 const walk = require('esprima-walk');
 const events = require('events');
 const exec = require('child_process').exec;
+// const _ = require('underscore');
 
-function getAstForFile(filename) {
-  const srcCode = fs.readFileSync(filename);
-  return esprima.parse(srcCode, {
-    loc: true,
-  });
-}
-
-function CallSymbol(node) {
-  return {
-    type: node.type,
-    object: node.callee.object.name || '',
-    property: node.callee.property.name || '',
-    start: node.loc.start.line,
-    end: node.loc.end.line,
-    source: '',
-  };
-}
-
+/*
+*   Classes
+*/
 function MemberExpSymbol(node, coveringTestName) {
   return {
     type: node.type,
@@ -50,11 +40,10 @@ function ImportSymbol(node) {
 
 function Symbols() {
   const importDeclarations = [];
-  let callExpressions = [];
   let memberExpressions = [];
 
   function print() {
-    [...importDeclarations, ...callExpressions].forEach(s => console.log(s));
+    [...importDeclarations, ...memberExpressions].forEach(s => console.log(s));
   }
 
   function update() {
@@ -62,19 +51,24 @@ function Symbols() {
     .map(d => d.specifiers.map(s => ({ name: s, source: d.source })))
     .reduce((prev, curr) => prev.concat(curr));
 
-    callExpressions.forEach((call, index) => {
-      const matchingImport = imports.filter(i => i.name === call.object)[0];
-      if (matchingImport) callExpressions[index].source = matchingImport.source;
+    // assign source filename to each symbol by analysing import statements
+    memberExpressions.forEach((memExp, index) => {
+      const matchingImport = imports.filter(imp => imp.name === memExp.object);
+      const importExistsWithName = matchingImport[0];
+      if (importExistsWithName) {
+        const importSource = matchingImport[0].source;
+        memberExpressions[index].source = importSource;
+      }
     });
 
-    callExpressions = callExpressions.filter(c => c.source !== '');
+    memberExpressions = memberExpressions.filter(m => m.source !== '');
   }
 
   function addMemberExpression(memExpSymbol) {
+    memberExpressions.push(memExpSymbol);
   }
 
   return {
-    callExpressions,
     importDeclarations,
     addMemberExpression,
     print,
@@ -82,49 +76,37 @@ function Symbols() {
   };
 }
 
+/*
+*   Functions
+*/
+function getAstForFile(filename) {
+  const srcCode = fs.readFileSync(filename);
+  return esprima.parse(srcCode, {
+    loc: true,
+  });
+}
+
 function walkAst(ast) {
   walk(ast, (node) => {
-    // if (node.type === 'ImportDeclaration') {
-    //   const symb = new ImportSymbol(node);
-    //   symbols.importDeclarations.push(symb);
-    // }
-    // if (node.type === 'CallExpression' && node.callee.object && node.callee.property) {
-    //   const symb = new CallSymbol(node);
-    //   symbols.callExpressions.push(symb);
-    // }
+    if (node.type === 'ImportDeclaration') {
+      const symb = new ImportSymbol(node);
+      symbols.importDeclarations.push(symb);
+    }
     if (node.type === 'ExpressionStatement' && node.expression.callee.name === 'test') {
-      // console.log(`${node.expression.callee.name} ${node.}`);
-      // updateCallExpressionSymbols(node);
-      // console.log(node);
       const testName = node.expression.arguments[0].value;
       const matches = esquery(node, 'CallExpression > MemberExpression');
       console.log(`
         -------------------
         m a t c h e s 
         -------------------`);
-      // console.log(matches);
       const memExpSymbols = matches.map(astNode => new MemberExpSymbol(astNode, testName));
       console.log(memExpSymbols);
       memExpSymbols.forEach(symbol => symbols.addMemberExpression(symbol));
     }
-    // if (node.type === 'FunctionExpression' || node.type === 'FunctionDeclaration') {
-    //   // const symb = new Symbol(node);
-    //   // console.log(symb);
-    //   console.log(node);
-    // }
   });
 }
 
-function updateCallExpressionSymbols(ast) {
-  walk(ast, (node) => {
-    if (node.type === 'CallExpression' && node.callee.object && node.callee.property) {
-      const symb = new CallSymbol(node);
-      console.log(symb);
-    }
-  });
-}
-
-function analyseTestResults(testOutput) {
+function parseTapOutput(testOutput) {
   const regex = /(not ok|ok)(.*)/g;
   const testResults = testOutput.match(regex)
   .reduce((results, currentResult, index) => {
@@ -138,17 +120,21 @@ function analyseTestResults(testOutput) {
   console.log(testResults);
 }
 
+/*
+*   Main
+*/
 const TESTS_FINISHED_EVENT = 'TESTS_FINISHED_EVENT';
 
 let symbols = new Symbols();
 const filename = process.argv[2];
 const eventEmitter = new events.EventEmitter();
 
-eventEmitter.on(TESTS_FINISHED_EVENT, analyseTestResults);
+eventEmitter.on(TESTS_FINISHED_EVENT, parseTapOutput);
 
 let ast = getAstForFile(filename);
-// console.log(ast);
 walkAst(ast);
+symbols.update();
+symbols.print();
 
 /*
 *   Watch
@@ -170,7 +156,7 @@ fs.watchFile(filename, watchOptions, (current, previous) => {
   });
 });
 
-
-// get symbols from source file
-// get symbols from test file
-// find symbols used in each test
+// TODO:
+// use parsed failing test output to query for matching symbols by test name
+// get symbols for source file as well as test file
+// generate json file showing passing / failing lines

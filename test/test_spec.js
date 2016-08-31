@@ -14,3 +14,8 @@ test('test subtract', t => {
   const sum = calc.subtract(5, 3);
   t.is(sum, 1);
 });
+
+test('test out division', t => {
+  const result = calc.divide(10, 2);
+  t.is(result, 5);
+});
