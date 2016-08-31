@@ -1,5 +1,6 @@
 const fs = require('fs');
 const esprima = require('esprima-harmony');
+const esquery = require('esquery');
 const walk = require('esprima-walk');
 const events = require('events');
 const exec = require('child_process').exec;
@@ -22,6 +23,18 @@ function CallSymbol(node) {
   };
 }
 
+function MemberExpSymbol(node, coveringTestName) {
+  return {
+    type: node.type,
+    object: node.object.name || '',
+    property: node.property.name || '',
+    start: node.loc.start.line,
+    end: node.loc.end.line,
+    source: '',
+    coveredBy: coveringTestName,
+  };
+}
+
 function ImportSymbol(node) {
   function specifiers() {
     return node.specifiers.map(s => s.id.name);
@@ -38,6 +51,7 @@ function ImportSymbol(node) {
 function Symbols() {
   const importDeclarations = [];
   let callExpressions = [];
+  let memberExpressions = [];
 
   function print() {
     [...importDeclarations, ...callExpressions].forEach(s => console.log(s));
@@ -56,9 +70,13 @@ function Symbols() {
     callExpressions = callExpressions.filter(c => c.source !== '');
   }
 
+  function addMemberExpression(memExpSymbol) {
+  }
+
   return {
     callExpressions,
     importDeclarations,
+    addMemberExpression,
     print,
     update,
   };
@@ -66,21 +84,43 @@ function Symbols() {
 
 function walkAst(ast) {
   walk(ast, (node) => {
-    if (node.type === 'ImportDeclaration') {
-      const symb = new ImportSymbol(node);
-      symbols.importDeclarations.push(symb);
+    // if (node.type === 'ImportDeclaration') {
+    //   const symb = new ImportSymbol(node);
+    //   symbols.importDeclarations.push(symb);
+    // }
+    // if (node.type === 'CallExpression' && node.callee.object && node.callee.property) {
+    //   const symb = new CallSymbol(node);
+    //   symbols.callExpressions.push(symb);
+    // }
+    if (node.type === 'ExpressionStatement' && node.expression.callee.name === 'test') {
+      // console.log(`${node.expression.callee.name} ${node.}`);
+      // updateCallExpressionSymbols(node);
+      // console.log(node);
+      const testName = node.expression.arguments[0].value;
+      const matches = esquery(node, 'CallExpression > MemberExpression');
+      console.log(`
+        -------------------
+        m a t c h e s 
+        -------------------`);
+      // console.log(matches);
+      const memExpSymbols = matches.map(astNode => new MemberExpSymbol(astNode, testName));
+      console.log(memExpSymbols);
+      memExpSymbols.forEach(symbol => symbols.addMemberExpression(symbol));
     }
+    // if (node.type === 'FunctionExpression' || node.type === 'FunctionDeclaration') {
+    //   // const symb = new Symbol(node);
+    //   // console.log(symb);
+    //   console.log(node);
+    // }
+  });
+}
+
+function updateCallExpressionSymbols(ast) {
+  walk(ast, (node) => {
     if (node.type === 'CallExpression' && node.callee.object && node.callee.property) {
       const symb = new CallSymbol(node);
-      symbols.callExpressions.push(symb);
+      console.log(symb);
     }
-    // if (node.type === 'ExpressionStatement') {
-    //   console.log(node.expression);
-    // }
-    // if (node.type === 'FunctionExpression' || node.type === 'FunctionDeclaration') {
-    //   const symb = new Symbol(node);
-    //   console.log(symb);
-    // }
   });
 }
 
@@ -100,17 +140,15 @@ function analyseTestResults(testOutput) {
 
 const TESTS_FINISHED_EVENT = 'TESTS_FINISHED_EVENT';
 
-const symbols = new Symbols();
+let symbols = new Symbols();
 const filename = process.argv[2];
 const eventEmitter = new events.EventEmitter();
 
 eventEmitter.on(TESTS_FINISHED_EVENT, analyseTestResults);
 
 let ast = getAstForFile(filename);
-
+// console.log(ast);
 walkAst(ast);
-symbols.update();
-symbols.print();
 
 /*
 *   Watch
@@ -121,6 +159,7 @@ fs.watchFile(filename, watchOptions, (current, previous) => {
   console.log(`current: ${current.mtime}`);
   console.log(`previous: ${previous.mtime}`);
 
+  symbols = new Symbols();
   ast = getAstForFile(filename);
   walkAst(ast);
   symbols.update();
@@ -130,3 +169,8 @@ fs.watchFile(filename, watchOptions, (current, previous) => {
     eventEmitter.emit(TESTS_FINISHED_EVENT, testOutput, executionError);
   });
 });
+
+
+// get symbols from source file
+// get symbols from test file
+// find symbols used in each test
