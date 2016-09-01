@@ -19,3 +19,8 @@ test('test out division', t => {
   const result = calc.divide(10, 2);
   t.is(result, 5);
 });
+
+test('a brand new test', t => {
+  const answer = calc.multiply(2, 3);
+  t.is(answer, 6);
+});
