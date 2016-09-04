@@ -7,9 +7,11 @@ const esquery = require('esquery');
 const walk = require('esprima-walk');
 const events = require('events');
 const exec = require('child_process').exec;
-const Symbols = require('./lib/symbols/symbols');
+const SymbolTable = require('./lib/symbols/symbol-table');
 const MemberExpSymbol = require('./lib/symbols/member-expression');
 const ImportSymbol = require('./lib/symbols/import');
+const TestSymbol = require('./lib/symbols/test');
+const Spinner = require('cli-spinner').Spinner;
 
 /*
 *   Functions
@@ -28,9 +30,9 @@ function walkAst(ast) {
       symbols.importDeclarations.push(symb);
     }
     if (node.type === 'ExpressionStatement' && node.expression.callee.name === 'test') {
-      const testName = node.expression.arguments[0].value;
+      const testSymbol = new TestSymbol(node);
       const matches = esquery(node, 'CallExpression > MemberExpression');
-      const memExpSymbols = matches.map(astNode => new MemberExpSymbol(astNode, testName));
+      const memExpSymbols = matches.map(astNode => new MemberExpSymbol(astNode, testSymbol));
       memExpSymbols.forEach(symbol => symbols.addMemberExpression(symbol));
     }
   });
@@ -61,8 +63,10 @@ const TESTS_FINISHED_EVENT = 'TESTS_FINISHED_EVENT';
 
 const filename = process.argv[2];
 const eventEmitter = new events.EventEmitter();
+const spinner = new Spinner('running tests...\r');
+spinner.setSpinnerString(12);
 let ast = getAstForFile(filename);
-let symbols = new Symbols();
+let symbols = new SymbolTable();
 
 eventEmitter.on(TESTS_FINISHED_EVENT, generateCoverageReport);
 
@@ -74,13 +78,14 @@ const watchOptions = { persistent: true, interval: 500 };
 console.log('watching...');
 
 fs.watchFile(filename, watchOptions, () => {
-  symbols = new Symbols();
+  symbols = new SymbolTable();
   ast = getAstForFile(filename);
   walkAst(ast);
   symbols.update();
 
-  console.log('running tests...');
+  spinner.start();
   exec('ava', (error, testOutput, executionError) => {
+    spinner.stop();
     eventEmitter.emit(TESTS_FINISHED_EVENT, testOutput, executionError);
   });
 });

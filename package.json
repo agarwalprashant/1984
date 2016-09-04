@@ -32,6 +32,7 @@
   },
   "dependencies": {
     "ava": "^0.16.0",
+    "cli-spinner": "^0.2.5",
     "esprima": "^2.7.3",
     "esprima-harmony": "^7001.1.0-dev-harmony-fb",
     "esprima-walk": "^0.1.0",
