@@ -1,26 +1,22 @@
 import test from 'ava';
 import calc from '../simplecalc';
 
-test('my pssing test', t => {
-  t.pass();
+test('add', t => {
+  t.is(calc.add(2, 2), 4);
 });
 
-test('test add', t => {
-  const sum = calc.add(2, 2);
-  t.is(sum, 4);
+test('subtract', t => {
+  t.is(calc.subtract(10, 8), 2);
 });
 
-test('test subtract', t => {
-  const sum = calc.subtract(5, 3);
-  t.is(sum, 2);
-});
-
-test('test out division', t => {
-  const result = calc.divide(10, 2);
-  t.is(result, 5);
+test('divide', t => {
+  t.is(calc.divide(10, 2), 5);
 });
 
 test('multiply', t => {
-  const result = calc.multiply(10, 2);
-  t.is(result, 20);
+  t.is(calc.multiply(4, 2), 8);
+});
+
+test('modulo', t => {
+  t.is(calc.modulo(10, 2), 0);
 });
